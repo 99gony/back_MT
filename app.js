@@ -7,7 +7,7 @@ const session = require("express-session");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const userRouter = require("./routes/user");
+const authRouter = require("./routes/auth");
 const { sequelize } = require("./models");
 const passportConfig = require("./passport");
 const passport = require("passport");
@@ -15,7 +15,7 @@ const passport = require("passport");
 const app = express();
 
 sequelize
-  .sync()
+  .sync({ force: false })
   .then(() => {
     console.log("DB 연결 성공");
   })
@@ -25,7 +25,12 @@ sequelize
 
 passportConfig();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -41,7 +46,7 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use("/user", userRouter);
+app.use("/auth", authRouter);
 
 app.listen(8080, () => {
   console.log(8080 + "서버 스타트!");

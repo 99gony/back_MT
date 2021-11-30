@@ -2,6 +2,10 @@ const passport = require("passport");
 const { User } = require("../models");
 
 const local = require("./local");
+const kakao = require("./kakao");
+const google = require("./google");
+const naver = require("./naver");
+const facebook = require("./facebook");
 
 module.exports = () => {
   passport.serializeUser((user, done) => {
@@ -19,4 +23,8 @@ module.exports = () => {
   });
 
   local();
+  kakao();
+  google();
+  naver();
+  facebook();
 };

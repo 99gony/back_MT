@@ -17,7 +17,7 @@ module.exports = () => {
           });
           if (!user) {
             return done(null, false, {
-              message: "존재하지 않는 이메일입니다.",
+              message: "이메일 또는 비밀번호가 잘못 입력되었습니다.",
             });
           }
 
@@ -26,7 +26,9 @@ module.exports = () => {
             return done(null, user);
           }
 
-          return done(null, false, { message: "잘못된 비밀번호입니다." });
+          return done(null, false, {
+            message: "이메일 또는 비밀번호가 잘못 입력되었습니다.",
+          });
         } catch (err) {
           console.error(err);
           return done(err);
