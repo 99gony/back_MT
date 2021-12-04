@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const { User } = require("../models");
 const passport = require("passport");
 const { frontServer } = require("../config/server");
+const { isLoggedIn, isNotLoggedIn } = require("./middlewares");
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-router.post("/login", (req, res, next) => {
+router.post("/login", isNotLoggedIn, (req, res, next) => {
   passport.authenticate("local", (err, user, reason) => {
     if (err) {
       console.error(err);
@@ -36,12 +37,15 @@ router.post("/login", (req, res, next) => {
         console.error(loginErr);
         return next(loginErr);
       }
+      if (req.body.isAutoLogin) {
+        req.session.cookie.maxAge = 315360000000; //10년
+      }
       return res.json(user);
     });
   })(req, res, next);
 });
 
-router.post("/join", async (req, res, next) => {
+router.post("/join", isNotLoggedIn, async (req, res, next) => {
   try {
     const { nickname, mbti, gender, character, email, password, id } = req.body;
     if (email && password && !id) {
@@ -85,7 +89,7 @@ router.post("/join", async (req, res, next) => {
   }
 });
 
-router.get("/kakao", passport.authenticate("kakao"));
+router.get("/kakao", isNotLoggedIn, passport.authenticate("kakao"));
 
 router.get("/kakao/callback", (req, res, next) => {
   passport.authenticate("kakao", (err, user) => {
@@ -105,6 +109,7 @@ router.get("/kakao/callback", (req, res, next) => {
 
 router.get(
   "/google",
+  isNotLoggedIn,
   passport.authenticate("google", {
     scope: ["profile"],
     prompt: "select_account",
@@ -127,7 +132,7 @@ router.get("/google/callback", (req, res, next) => {
   })(req, res, next);
 });
 
-router.get("/naver", passport.authenticate("naver"));
+router.get("/naver", isNotLoggedIn, passport.authenticate("naver"));
 
 router.get("/naver/callback", (req, res, next) => {
   passport.authenticate("naver", (err, user) => {
@@ -145,7 +150,7 @@ router.get("/naver/callback", (req, res, next) => {
   })(req, res, next);
 });
 
-router.get("/facebook", passport.authenticate("facebook"));
+router.get("/facebook", isNotLoggedIn, passport.authenticate("facebook"));
 
 router.get("/facebook/callback", (req, res, next) => {
   passport.authenticate("facebook", (err, user) => {
@@ -163,17 +168,17 @@ router.get("/facebook/callback", (req, res, next) => {
   })(req, res, next);
 });
 
-router.get("/logout", (req, res) => {
+router.get("/logout", isLoggedIn, (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       console.error(err);
       return next(err);
     }
-    if (req.user?.provider === "kakao") {
-      req.logout();
+    const { provider } = req.user;
+    req.logout();
+    if (provider === "kakao") {
       return res.redirect(frontServer);
     }
-    req.logout();
     res.send("ok");
   });
 });
