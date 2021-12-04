@@ -43,25 +43,42 @@ router.post("/login", (req, res, next) => {
 
 router.post("/join", async (req, res, next) => {
   try {
-    const { nickname, mbti, gender, character, email, password } = req.body;
-    const exUser = await User.findOne({
-      where: {
+    const { nickname, mbti, gender, character, email, password, id } = req.body;
+    if (email && password && !id) {
+      const exUser = await User.findOne({
+        where: {
+          email,
+        },
+      });
+      if (exUser) {
+        return res.status(403).send("이미 사용중인 이메일입니다.");
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = await User.create({
+        nickname,
+        mbti,
+        gender,
+        character,
         email,
-      },
-    });
-    if (exUser) {
-      return res.status(403).send("이미 사용중인 이메일입니다.");
+        password: hashedPassword,
+      });
+      res.json(newUser);
+    } else {
+      await User.update(
+        {
+          nickname,
+          mbti,
+          gender,
+          character,
+        },
+        {
+          where: { id },
+        }
+      );
+      const socialUser = await User.findByPk(id);
+      console.log(socialUser);
+      res.json(socialUser);
     }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({
-      nickname,
-      mbti,
-      gender,
-      character,
-      email,
-      password: hashedPassword,
-    });
-    res.json(newUser);
   } catch (err) {
     console.error(err);
     next(err);
@@ -86,7 +103,13 @@ router.get("/kakao/callback", (req, res, next) => {
   })(req, res, next);
 });
 
-router.get("/google", passport.authenticate("google", { scope: ["profile"] }));
+router.get(
+  "/google",
+  passport.authenticate("google", {
+    scope: ["profile"],
+    prompt: "select_account",
+  })
+);
 
 router.get("/google/callback", (req, res, next) => {
   passport.authenticate("google", (err, user) => {
@@ -141,9 +164,18 @@ router.get("/facebook/callback", (req, res, next) => {
 });
 
 router.get("/logout", (req, res) => {
-  req.logout();
-  req.session.destroy();
-  res.send("ok");
+  req.session.destroy((err) => {
+    if (err) {
+      console.error(err);
+      return next(err);
+    }
+    if (req.user?.provider === "kakao") {
+      req.logout();
+      return res.redirect(frontServer);
+    }
+    req.logout();
+    res.send("ok");
+  });
 });
 
 module.exports = router;
