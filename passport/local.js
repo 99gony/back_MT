@@ -7,17 +7,17 @@ module.exports = () => {
   passport.use(
     new LocalStrategy(
       {
-        usernameField: "email",
+        usernameField: "uid",
         passwordField: "password",
       },
-      async (email, password, done) => {
+      async (uid, password, done) => {
         try {
           const user = await User.findOne({
-            where: { email },
+            where: { uid },
           });
           if (!user) {
             return done(null, false, {
-              message: "이메일 또는 비밀번호가 잘못 입력되었습니다.",
+              message: "아이디 또는 비밀번호가 잘못 입력되었습니다.",
             });
           }
 
@@ -27,7 +27,7 @@ module.exports = () => {
           }
 
           return done(null, false, {
-            message: "이메일 또는 비밀번호가 잘못 입력되었습니다.",
+            message: "아이디 또는 비밀번호가 잘못 입력되었습니다.",
           });
         } catch (err) {
           console.error(err);

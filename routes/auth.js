@@ -45,17 +45,20 @@ router.post("/login", isNotLoggedIn, (req, res, next) => {
   })(req, res, next);
 });
 
-router.post("/join", isNotLoggedIn, async (req, res, next) => {
+router.post("/join", async (req, res, next) => {
   try {
-    const { nickname, mbti, gender, character, email, password, id } = req.body;
-    if (email && password && !id) {
+    const { nickname, mbti, gender, character, uid, password, id } = req.body;
+    if (!nickname || !mbti || !gender) {
+      return res.status(404).send("입력란을 모두 입력해주세요.");
+    }
+    if (!req.isAuthenticated() && uid && password) {
       const exUser = await User.findOne({
         where: {
-          email,
+          uid,
         },
       });
       if (exUser) {
-        return res.status(403).send("이미 사용중인 이메일입니다.");
+        return res.status(403).send("이미 사용중인 아이디입니다.");
       }
       const hashedPassword = await bcrypt.hash(password, 10);
       const newUser = await User.create({
@@ -63,11 +66,17 @@ router.post("/join", isNotLoggedIn, async (req, res, next) => {
         mbti,
         gender,
         character,
-        email,
+        uid,
         password: hashedPassword,
       });
-      res.json(newUser);
-    } else {
+      req.login(newUser, (loginErr) => {
+        if (loginErr) {
+          console.error(loginErr);
+          return next(loginErr);
+        }
+        return res.json(newUser);
+      });
+    } else if (req.isAuthenticated() && !uid && !password) {
       await User.update(
         {
           nickname,
@@ -80,8 +89,9 @@ router.post("/join", isNotLoggedIn, async (req, res, next) => {
         }
       );
       const socialUser = await User.findByPk(id);
-      console.log(socialUser);
       res.json(socialUser);
+    } else {
+      res.status(404).send("잘못된 접근입니다.");
     }
   } catch (err) {
     console.error(err);
