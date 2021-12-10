@@ -4,6 +4,8 @@ const { User } = require("../models");
 const passport = require("passport");
 const { frontServer } = require("../config/server");
 const { isLoggedIn, isNotLoggedIn } = require("./middlewares");
+const { transporter } = require("../config/email");
+const sendMail = require("../config/email");
 
 const router = express.Router();
 
@@ -47,18 +49,18 @@ router.post("/login", isNotLoggedIn, (req, res, next) => {
 
 router.post("/join", async (req, res, next) => {
   try {
-    const { nickname, mbti, gender, character, uid, password, id } = req.body;
+    const { nickname, mbti, gender, character, email, password, id } = req.body;
     if (!nickname || !mbti || !gender) {
       return res.status(404).send("입력란을 모두 입력해주세요.");
     }
-    if (!req.isAuthenticated() && uid && password) {
+    if (!req.isAuthenticated() && email && password) {
       const exUser = await User.findOne({
         where: {
-          uid,
+          email,
         },
       });
       if (exUser) {
-        return res.status(403).send("이미 사용중인 아이디입니다.");
+        return res.status(403).send("이미 사용중인 이메일입니다.");
       }
       const hashedPassword = await bcrypt.hash(password, 10);
       const newUser = await User.create({
@@ -66,7 +68,7 @@ router.post("/join", async (req, res, next) => {
         mbti,
         gender,
         character,
-        uid,
+        email,
         password: hashedPassword,
       });
       req.login(newUser, (loginErr) => {
@@ -76,7 +78,7 @@ router.post("/join", async (req, res, next) => {
         }
         return res.json(newUser);
       });
-    } else if (req.isAuthenticated() && !uid && !password) {
+    } else if (req.isAuthenticated() && !email && !password) {
       await User.update(
         {
           nickname,
@@ -178,7 +180,7 @@ router.get("/facebook/callback", (req, res, next) => {
   })(req, res, next);
 });
 
-router.get("/logout", isLoggedIn, (req, res) => {
+router.get("/logout", isLoggedIn, (req, res, next) => {
   req.session.destroy((err) => {
     if (err) {
       console.error(err);
@@ -191,6 +193,24 @@ router.get("/logout", isLoggedIn, (req, res) => {
     }
     res.send("ok");
   });
+});
+
+router.post("/email", isNotLoggedIn, async (req, res, next) => {
+  try {
+    const { targetMail } = req.body;
+    const exUser = await User.findOne({
+      where: {
+        email: targetMail,
+      },
+    });
+    if (exUser) {
+      return res.status(401).send("이미 가입된 이메일입니다.");
+    }
+    sendMail(targetMail, res);
+  } catch (err) {
+    console.error(err);
+    return next(err);
+  }
 });
 
 module.exports = router;

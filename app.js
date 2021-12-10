@@ -5,7 +5,14 @@ const logger = require("morgan");
 const cors = require("cors");
 const session = require("express-session");
 const dotenv = require("dotenv");
+const { createClient } = require("redis");
+const RedisStore = require("connect-redis")(session);
+
 dotenv.config();
+const redisClient = createClient({
+  url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+  password: process.env.REDIS_PASSWORD,
+});
 
 const authRouter = require("./routes/auth");
 const { sequelize } = require("./models");
@@ -41,6 +48,7 @@ app.use(
     saveUninitialized: false,
     resave: false,
     secret: process.env.COOKIE_SECRET,
+    store: new RedisStore({ client: redisClient }),
   })
 );
 app.use(passport.initialize());
