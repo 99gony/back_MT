@@ -11,8 +11,16 @@ const RedisStore = require("connect-redis")(session);
 dotenv.config();
 const redisClient = createClient({
   url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
-  password: process.env.REDIS_PASSWORD,
+  legacyMode: true,
 });
+(async () => {
+  try {
+    await redisClient.connect();
+    console.log("redis 연결 성공");
+  } catch (err) {
+    console.error(err);
+  }
+})();
 
 const authRouter = require("./routes/auth");
 const { sequelize } = require("./models");

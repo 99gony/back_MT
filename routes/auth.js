@@ -4,7 +4,6 @@ const { User } = require("../models");
 const passport = require("passport");
 const { frontServer } = require("../config/server");
 const { isLoggedIn, isNotLoggedIn } = require("./middlewares");
-const { transporter } = require("../config/email");
 const sendMail = require("../config/email");
 
 const router = express.Router();
